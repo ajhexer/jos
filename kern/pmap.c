@@ -97,13 +97,17 @@ boot_alloc(uint32_t n)
 		nextfree = ROUNDUP((char *) end, PGSIZE);
 	}
 
-	// Allocate a chunk large enough to hold 'n' bytes, then update
-	// nextfree.  Make sure nextfree is kept aligned
-	// to a multiple of PGSIZE.
-	//
-	// LAB 2: Your code here.
+    result = nextfree;
 
-	return NULL;
+    // allocate memory by pushing the free page pointer
+    nextfree = ROUNDUP(result+n, PGSIZE);
+
+    // check if we have enough memory
+    if ((uint32_t)nextfree >= KERNBASE+PTSIZE){
+        cprintf("Out of memory for requested size: %d", n);
+        panic("Failed to allocate memory on boot_alloc");
+    }
+    return result;
 }
 
 // Set up a two-level page table:
@@ -234,29 +238,25 @@ mem_init(void)
 void
 page_init(void)
 {
-	// The example code here marks all physical pages as free.
-	// However this is not truly the case.  What memory is free?
-	//  1) Mark physical page 0 as in use.
-	//     This way we preserve the real-mode IDT and BIOS structures
-	//     in case we ever need them.  (Currently we don't, but...)
-	//  2) The rest of base memory, [PGSIZE, npages_basemem * PGSIZE)
-	//     is free.
-	//  3) Then comes the IO hole [IOPHYSMEM, EXTPHYSMEM), which must
-	//     never be allocated.
-	//  4) Then extended memory [EXTPHYSMEM, ...).
-	//     Some of it is in use, some is free. Where is the kernel
-	//     in physical memory?  Which pages are already in use for
-	//     page tables and other data structures?
-	//
-	// Change the code to reflect this.
-	// NB: DO NOT actually touch the physical memory corresponding to
-	// free pages!
-	size_t i;
-	for (i = 0; i < npages; i++) {
+    pages[0].pp_ref = 1;
+    pages[0].pp_link = NULL;
+
+    size_t i;
+	for (i = 1; i < npages_basemem; i++) {
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
 	}
+
+    // find index of memory after kernel base address
+    uint32_t first_free_page_address = (uint32_t) PADDR(boot_alloc(0));
+    uint32_t first_free_page_index = first_free_page_address / PGSIZE;
+
+    for (i=first_free_page_index; i<npages; i++){
+        pages[i].pp_ref = 0;
+        pages[i].pp_link = page_free_list;
+        page_free_list = &pages[i];
+    }
 }
 
 //
