@@ -151,9 +151,9 @@ mem_init(void)
 	// each physical page, there is a corresponding struct PageInfo in this
 	// array.  'npages' is the number of physical pages in memory.  Use memset
 	// to initialize all fields of each struct PageInfo to 0.
-	// Your code goes here:
-
-
+    pages = (struct PageInfo *) boot_alloc(npages * sizeof(struct PageInfo));
+    uint32_t pages_size = (uint32_t)boot_alloc(0) - (uint32_t)pages;
+    memset(pages, 0, pages_size);
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
 	// up the list of free physical pages. Once we've done so, all further
@@ -274,8 +274,16 @@ page_init(void)
 struct PageInfo *
 page_alloc(int alloc_flags)
 {
-	// Fill this function in
-	return 0;
+    if(!page_free_list){
+        return NULL;
+    }
+    struct PageInfo* temp_page_info = page_free_list;
+    page_free_list = page_free_list->pp_link;
+    temp_page_info->pp_link = NULL;
+    if (alloc_flags & ALLOC_ZERO) {
+        memset(page2kva(temp_page_info), 0, PGSIZE);
+    }
+    return temp_page_info;
 }
 
 //
@@ -285,9 +293,11 @@ page_alloc(int alloc_flags)
 void
 page_free(struct PageInfo *pp)
 {
-	// Fill this function in
-	// Hint: You may want to panic if pp->pp_ref is nonzero or
-	// pp->pp_link is not NULL.
+    if (pp->pp_ref!=0 || pp->pp_link!=NULL){
+        panic("Invalid page info");
+    }
+    pp->pp_link = page_free_list;
+    page_free_list = pp;
 }
 
 //
