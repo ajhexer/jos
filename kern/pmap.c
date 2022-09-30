@@ -336,8 +336,21 @@ page_decref(struct PageInfo* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+    pde_t pde = pgdir[PDX(va)];
+    if (!(pde & PTE_P) && create) {
+        struct PageInfo* pageInfo = page_alloc(ALLOC_ZERO);
+        if (!pageInfo){
+            return NULL;
+        }
+        pageInfo->pp_ref++;
+        pde = page2pa(pageInfo) | PTE_U | PTE_P | PTE_W;
+        pgdir[PDX(va)] = pde;
+
+    }else if (!(pde & PTE_P)) {
+        return NULL;
+    }
+    pte_t *page_table = KADDR(PTE_ADDR(pde));
+    return &page_table[PTX(va)];
 }
 
 //
@@ -354,7 +367,22 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+    // size should be multiple of PGSIZE
+    assert(size%PGSIZE==0);
+
+    // va and pa are page-aligned
+    assert(va%PGSIZE==0);
+    assert(pa%PGSIZE==0);
+
+
+    pte_t *pte;
+    for (size_t i=0, n=size/PGSIZE; i<n; i++, pa+=PGSIZE, va+=PGSIZE){
+        pte = pgdir_walk(pgdir, va, 1);
+        if (!pte){
+            panic("could not allocated memory");
+        }
+        *pte = pa | perm | PTE_P;
+    }
 }
 
 //
