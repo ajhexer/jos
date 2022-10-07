@@ -129,7 +129,7 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	panic("mem_init: This function is not finished\n");
+//	panic("mem_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -175,8 +175,7 @@ mem_init(void)
 	//    - the new image at UPAGES -- kernel R, user R
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
-	// Your code goes here:
-    boot_map_region(kern_pgdir, UPAGES, PTSIZE, pages, PTE_U);
+    boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -188,7 +187,6 @@ mem_init(void)
 	//       the kernel overflows its stack, it will fault rather than
 	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
-	// Your code goes here:
     boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
@@ -198,7 +196,6 @@ mem_init(void)
 	// We might not have 2^32 - KERNBASE bytes of physical memory, but
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
-	// Your code goes here:
     boot_map_region(kern_pgdir, KERNBASE, 0xffffffff - KERNBASE + 1, 0, PTE_W);
 
 	// Check that the initial page directory has been set up correctly.
@@ -420,17 +417,15 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
     if (!pte) {
         return -E_NO_MEM;
     }
-    if (*pte & PTE_P) {
-        if (page2pa(pp) == PTE_ADDR(pte)) {
-            *pte = page2pa(pp) | perm;
-            return 0;
-        }
-        page_remove(pgdir, va);
-    }
-    *pte = page2pa(pp) | PTE_P | perm;
-    pp->pp_ref++;
-    return 0;
 
+    pp->pp_ref++;
+    if (*pte & PTE_P) {
+        page_remove(pgdir, va);
+        tlb_invalidate(pgdir, va);
+    }
+
+    *pte = page2pa(pp) | perm | PTE_P;
+    return 0;
 }
 
 //
