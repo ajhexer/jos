@@ -17,7 +17,7 @@ struct UserStabData {
 	const struct Stab *stab_end;
 	const char *stabstr;
 	const char *stabstr_end;
-}
+};
 
 // stab_binsearch(stabs, region_left, region_right, type, addr)
 //

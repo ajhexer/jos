@@ -3,6 +3,8 @@
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/assert.h>
+#include <kern/env.h>
+#include <kern/trap.h>
 
 #include <kern/monitor.h>
 #include <kern/console.h>
