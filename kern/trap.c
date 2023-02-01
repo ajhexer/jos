@@ -57,6 +57,29 @@ static const char *trapname(int trapno)
 		return "System call";
 	return "(unknown trap)";
 }
+extern void divide_handler();
+extern void debug_handler();
+extern void nmi_handler();
+extern void brkpt_handler();
+extern void oflow_handler();
+extern void bound_handler();
+extern void illop_handler();
+extern void device_handler();
+extern void dblflt_handler();
+extern void tss_handler();
+extern void segnp_handler();
+extern void stack_handler();
+extern void gpflt_handler();
+extern void pgflt_handler();
+extern void fperr_handler();
+extern void align_handler();
+extern void mchk_handler();
+extern void simderr_handler();
+extern void syscall_handler();
+extern void default_handler();
+extern void timer_handler();
+extern void keyboard_handler();
+extern void serial_handler();
 
 
 void
