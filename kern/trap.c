@@ -57,29 +57,8 @@ static const char *trapname(int trapno)
 		return "System call";
 	return "(unknown trap)";
 }
-extern void divide_handler();
-extern void debug_handler();
-extern void nmi_handler();
-extern void brkpt_handler();
-extern void oflow_handler();
-extern void bound_handler();
-extern void illop_handler();
-extern void device_handler();
-extern void dblflt_handler();
-extern void tss_handler();
-extern void segnp_handler();
-extern void stack_handler();
-extern void gpflt_handler();
-extern void pgflt_handler();
-extern void fperr_handler();
-extern void align_handler();
-extern void mchk_handler();
-extern void simderr_handler();
-extern void syscall_handler();
-extern void default_handler();
-extern void timer_handler();
-extern void keyboard_handler();
-extern void serial_handler();
+
+
 
 
 void
@@ -87,26 +66,29 @@ trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
-    SETGATE(idt[T_DIVIDE], 1, GD_KT, divide_handler, 0)
-    SETGATE(idt[T_DEBUG], 1, GD_KT, debug_handler, 0)
-    SETGATE(idt[T_NMI], 0, GD_KT, nmi_handler, 0)
-    SETGATE(idt[T_BRKPT], 1, GD_KT, brkpt_handler, 3)
-    SETGATE(idt[T_OFLOW], 1, GD_KT, oflow_handler, 0)
-    SETGATE(idt[T_BOUND], 1, GD_KT, bound_handler, 0)
-    SETGATE(idt[T_ILLOP], 1, GD_KT, illop_handler, 0)
-    SETGATE(idt[T_DEVICE], 1, GD_KT, device_handler, 0)
-    SETGATE(idt[T_DBLFLT], 1, GD_KT, dblflt_handler, 0)
-    SETGATE(idt[T_TSS], 1, GD_KT, tss_handler, 0)
-    SETGATE(idt[T_SEGNP], 1, GD_KT, segnp_handler, 0)
-    SETGATE(idt[T_STACK], 1, GD_KT, stack_handler, 0)
-    SETGATE(idt[T_GPFLT], 1, GD_KT, gpflt_handler, 0)
-    SETGATE(idt[T_PGFLT], 1, GD_KT, pgflt_handler, 0)
-    SETGATE(idt[T_FPERR], 1, GD_KT, fperr_handler, 0)
-    SETGATE(idt[T_ALIGN], 1, GD_KT, align_handler, 0)
-    SETGATE(idt[T_MCHK], 1, GD_KT, mchk_handler, 0)
-    SETGATE(idt[T_SIMDERR], 1, GD_KT, simderr_handler, 0)
+    SETGATE(idt[T_DIVIDE], 0, GD_KT, DIVIDE_H, 0)
+    SETGATE(idt[T_DEBUG], 0, GD_KT, DEBUG_H, 0)
+    SETGATE(idt[T_NMI], 0, GD_KT, NMI_H, 0)
+    SETGATE(idt[T_BRKPT], 0, GD_KT, BRKPT_H, 3)
+    SETGATE(idt[T_OFLOW], 0, GD_KT, OFLOW_H, 0)
+    SETGATE(idt[T_BOUND], 0, GD_KT, BOUND_H, 0)
+    SETGATE(idt[T_ILLOP], 0, GD_KT, ILLOP_H, 0)
+    SETGATE(idt[T_DEVICE], 0, GD_KT, DEVICE_H, 0)
+    SETGATE(idt[T_DBLFLT], 0, GD_KT, DBLFLT_H, 0)
+    SETGATE(idt[T_TSS], 0, GD_KT, TSS_H, 0)
+    SETGATE(idt[T_SEGNP], 0, GD_KT, SEGNP_H, 0)
+    SETGATE(idt[T_STACK], 0, GD_KT, STACK_H, 0)
+    SETGATE(idt[T_GPFLT], 0, GD_KT, GPFLT_H, 0)
+    SETGATE(idt[T_PGFLT], 0, GD_KT, PGFLT_H, 0)
+    SETGATE(idt[T_FPERR], 0, GD_KT, FPERR_H, 0)
+    SETGATE(idt[T_ALIGN], 0, GD_KT, ALIGN_H, 0)
+    SETGATE(idt[T_MCHK], 0, GD_KT, MCHK_H, 0)
+    SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR_H, 0)
 
-	// Per-CPU setup 
+    SETGATE(idt[T_SYSCALL], 0, GD_KT, SYSCALL_H, 3)
+
+
+    // Per-CPU setup
 	trap_init_percpu();
 }
 
@@ -188,7 +170,15 @@ trap_dispatch(struct Trapframe *tf)
         page_fault_handler(tf);
         return;
     }else if(tf->tf_trapno==T_BRKPT){
-        monitor(tf);
+        breakpoint_handler(tf);
+        return;
+    }else if(tf->tf_trapno==T_SYSCALL){
+        tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax,
+                                      tf->tf_regs.reg_edx,
+                                      tf->tf_regs.reg_ecx,
+                                      tf->tf_regs.reg_ebx,
+                                      tf->tf_regs.reg_edi,
+                                      tf->tf_regs.reg_esi);
         return;
     }
 
@@ -263,5 +253,11 @@ page_fault_handler(struct Trapframe *tf)
 		curenv->env_id, fault_va, tf->tf_eip);
 	print_trapframe(tf);
 	env_destroy(curenv);
+}
+
+void
+breakpoint_handler(struct Trapframe *tf) {
+    monitor(tf);
+    return;
 }
 
