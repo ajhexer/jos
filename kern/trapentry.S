@@ -5,6 +5,7 @@
 #include <inc/trap.h>
 
 
+
 ###################################################################
 # exceptions/interrupts
 ###################################################################
@@ -45,6 +46,7 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
+
     TRAPHANDLER_NOEC(divide_handler, T_DIVIDE)
     TRAPHANDLER_NOEC(debug_handler, T_DEBUG)
     TRAPHANDLER_NOEC(nmi_handler, T_NMI)
@@ -66,16 +68,14 @@
     TRAPHANDLER_NOEC(syscall_handler, T_SYSCALL)
     TRAPHANDLER_NOEC(default_handler, T_DEFAULT)
 
-
-
 /*
  * Lab 3: Your code here for _alltraps
  */
 
 _alltraps:
-        pushw $0
+        pushw $0 // padding
         pushw %ds
-        pushw $0
+        pushw $0 // padding
         pushw %es
         pushal
         push %esp
