@@ -22,6 +22,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
 
 	// LAB 3: Your code here.
+    user_mem_assert(curenv, s, len, PTE_P);
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
@@ -83,8 +84,15 @@ sys_exofork(void)
     // from the current environment -- but tweaked so sys_exofork
     // will appear to return 0.
 
-    // LAB 4: Your code here.
-    panic("sys_exofork not implemented");
+    struct Env* new_env;
+    int create_status = env_alloc(&new_env, curenv->env_id);
+    if(create_status<0){
+        return create_status;
+    }
+    new_env->env_status = ENV_RUNNABLE;
+    new_env->env_tf = curenv->env_tf;
+    new_env->env_tf.tf_regs.reg_eax = 0;
+    return new_env->env_id;
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
