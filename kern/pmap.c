@@ -262,9 +262,10 @@ mem_init_mp(void)
     //             it will fault rather than overwrite another CPU's stack.
     //             Known as a "guard page".
     //     Permissions: kernel RW, user NONE
-    //
-    // LAB 4: Your code here:
-
+    for(int i = 0; i<NCPU; i++){
+        uintptr_t stack_address = KSTACKTOP-KSTKSIZE - i*(KSTKSIZE + KSTKGAP);
+        boot_map_region(kern_pgdir, stack_address, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W);
+    }
 }
 
 // --------------------------------------------------------------
@@ -290,7 +291,11 @@ page_init(void)
     pages[0].pp_link = NULL;
 
     size_t i;
+    uintptr_t page_number = MPENTRY_PADDR/PGSIZE;
 	for (i = 1; i < npages_basemem; i++) {
+        if(i == page_number){
+            continue;
+        }
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -560,25 +565,13 @@ mmio_map_region(physaddr_t pa, size_t size)
     // (just like nextfree in boot_alloc).
     static uintptr_t base = MMIOBASE;
 
-    // Reserve size bytes of virtual memory starting at base and
-    // map physical pages [pa,pa+size) to virtual addresses
-    // [base,base+size).  Since this is device memory and not
-    // regular DRAM, you'll have to tell the CPU that it isn't
-    // safe to cache access to this memory.  Luckily, the page
-    // tables provide bits for this purpose; simply create the
-    // mapping with PTE_PCD|PTE_PWT (cache-disable and
-    // write-through) in addition to PTE_W.  (If you're interested
-    // in more details on this, see section 10.5 of IA32 volume
-    // 3A.)
-    //
-    // Be sure to round size up to a multiple of PGSIZE and to
-    // handle if this reservation would overflow MMIOLIM (it's
-    // okay to simply panic if this happens).
-    //
-    // Hint: The staff solution uses boot_map_region.
-    //
-    // Your code here:
-    
+    pa = ROUNDDOWN(pa, PGSIZE);
+    uintptr_t end = ROUNDUP(pa+size, PGSIZE);
+    if(end >= MMIOLIM)
+        panic("not enough memory for MMIO");
+    boot_map_region(kern_pgdir, base, size, pa, PTE_PCD|PTE_PWT|PTE_W);
+    base = ROUNDUP(base+size, PGSIZE);
+    return (void*)pa;
 }
 
 static uintptr_t user_mem_check_addr;
