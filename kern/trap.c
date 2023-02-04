@@ -104,7 +104,7 @@ void
 trap_init_percpu(void)
 {
 
-    
+
     uintptr_t id = thiscpu->cpu_id;
     thiscpu->cpu_ts.ts_esp0 = KSTACKTOP - id*(KSTKSIZE+KSTKGAP);
     thiscpu->cpu_ts.ts_ss0 = GD_KD;
@@ -242,7 +242,7 @@ trap(struct Trapframe *tf)
 		// Trapped from user mode.
         // Acquire the big kernel lock before doing any
         // serious kernel work.
-        // LAB 4: Your code here.
+        lock_kernel();
 		assert(curenv);
 
         // Garbage collect if current enviroment is a zombie
